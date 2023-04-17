@@ -1,4 +1,4 @@
-- hosts: node1.c5.com
+- hosts: node2ceph5
   become: true
   vars:
           - host_name:
@@ -18,12 +18,12 @@
                 cmd: ceph orch host maintenance enter "{{ host_name }}" {% if set_force | bool %} --force {% endif }
         register: maintenance_result
 
-       #- name: Perform the upgrade maintenance activity on the node
+       - name: Perform the upgrade maintenance activity on the node
        # ansible.builtin.dnf:
        #         name: "*"
        #         state: latest
 
-       #- name: Perform a reboot activity on the node
+       - name: Perform a reboot activity on the node
        # ansible.builtin.reboot:
        #         test_command: uptime
        #         reboot_timeout: 60

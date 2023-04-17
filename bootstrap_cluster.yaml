@@ -28,3 +28,14 @@
              monitoring: "{{ use_monitoring }}"
              cluster_network: "{{ cluster_network }}"
          when: ( bootstrap_status.stdout | int < 1 )
+
+       - name: Get the cluster status & version
+         ansible.builtin.shell:
+                 cmd: ceph versions && ceph status
+         register: out
+
+       - name: Print the cluster status and version
+         ansible.builtin.debug:
+                 msg: "out.stdout"
+
+

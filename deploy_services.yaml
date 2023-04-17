@@ -36,14 +36,14 @@
   tags:
       - add_hosts
   tasks:
-    block:
+  - block:
       - name: Add Hosts into the cluster
         ceph_orch_host:
                 name: "{{ ansible_facts['hostname'] }}"
                 address: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
                 labels: "{{ labels }}"
                 state: present
-    when: hostvars[inventory_hostname]['role'] == "add"
+    when: hostvars[inventory_hostname]['role'] is defined and hostvars[inventory_hostname]['role'] != "drain" 
 
 
 - hosts: cluster_a
@@ -51,7 +51,7 @@
   tags:
       - remove_hosts
   tasks:
-    block:
+  - block:
       - name: Drain the node
         ceph_orch_host:
                 name: "{{ ansible_facts['hostname'] }}"
