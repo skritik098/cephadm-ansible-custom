@@ -31,11 +31,11 @@
 
        - name: Get the cluster status & version
          ansible.builtin.shell:
-                 cmd: ceph versions && ceph status
+                 cmd: "ceph versions && ceph status"
          register: out
 
        - name: Print the cluster status and version
          ansible.builtin.debug:
-                 msg: "out.stdout"
+                 msg: "{{ out.stdout }}"
 
 

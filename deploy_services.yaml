@@ -78,10 +78,12 @@
 
 - hosts: admins
   become: true
+  tags:
+          - deploy_service
   tasks:
       - name: Deploy all the service spec file
         ceph_orch_apply:
-                spec: "{{ initial_sepc }} "
+                spec: "{{ initial_spec }} "
 
 
                        
