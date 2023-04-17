@@ -1,6 +1,7 @@
-- hosts:  admins
+- hosts:  admin
   tags:
        - boostrap_cluster
+       - deploy_service
   become: "{{ root_user }}"
   tasks:
        - name: Perform a Registry Login on the bootstrap node
@@ -31,19 +32,44 @@
              cluster_network: "{{ cluster_network }}"
          when: ( bootstrap_status.stdout | int < 1 )
 
+         #- name: Deploy SSH Keys on the hosts
+         #  ansible.builin.import_playbook: cephadm-distribute-ssh-key.yml
+         #  vars:
+         #cephadm_ssh_user: root
+         #admin_node: 
+
+
 - hosts: cluster_a
   become: True
   tags:
       - add_hosts
+      - deploy_service
+  gather_facts: true
   tasks:
-  - block:
+    # - name: Deploy SSH Keys on the hosts
+    #    ansible.builtin.import_tasks: cephadm-distribute-ssh-key.yml
+    #    vars:
+    #       cephadm_ssh_user: root
+    #       admin_node: node2ceph5
+
+      - name: Deploy SSH Keys on the hosts
+        ansible.builtin.shell:
+                cmd: "ansible-playbook -i {{ groups['cluster_a'] | join(',') }} cephadm-distribute-ssh-key.yml -e cephadm_ssh_user={{ cepadm_ssh_user }} -e admin_node=node2ceph5 -vv"
+        async: 15
+        poll: 2
+        run_once: true
+        changed_when: false
+        delegate_to: localhost
+
       - name: Add Hosts into the cluster
         ceph_orch_host:
-                name: "{{ ansible_facts['hostname'] }}"
-                address: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
-                labels: "{{ labels }}"
+                name: "{{ item.name }}"
+                address: "{{ item.address  }}"
+                labels: "{{ item.labels }}"
                 state: present
-    when: hostvars[inventory_hostname]['role'] is defined and hostvars[inventory_hostname]['role'] != "drain" 
+        loop: "{{ host_list }}"
+        delegate_to: node2ceph5
+        run_once: true
 
 
 - hosts: cluster_a
@@ -76,7 +102,7 @@
 
     when: hostvars[inventory_hostname]['role'] == "drain"
 
-- hosts: admins
+- hosts: admin
   become: true
   tags:
           - deploy_service

@@ -1,0 +1,11 @@
+host_list:
+        - name: node3ceph5
+          address: 10.74.255.76 
+          labels:
+               - mon
+               - mgr
+        - name: node1ceph5
+          address: 10.74.249.249
+          labels:
+                  - mon
+                  - mgr  

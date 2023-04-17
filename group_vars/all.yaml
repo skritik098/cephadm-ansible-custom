@@ -16,3 +16,4 @@ use_monitoring: true    ## To deploy the monitoring stack services
 cluster_network: ""     ### Cluster Network information
 
 
+cepadm_ssh_user: root

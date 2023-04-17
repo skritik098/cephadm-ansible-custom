@@ -1,4 +1,4 @@
-- hosts:  admins
+- hosts:  admin
   become: "{{ root_user }}"
   tasks:
        - name: Perform a Registry Login on the bootstrap node
@@ -29,12 +29,12 @@
              cluster_network: "{{ cluster_network }}"
          when: ( bootstrap_status.stdout | int < 1 )
 
-       - name: Get the cluster status & version
+       - name: Get the cluster status 
          ansible.builtin.shell:
-                 cmd: "ceph versions && ceph status"
+                 cmd: " cephadm shell ceph status"
          register: out
 
-       - name: Print the cluster status and version
+       - name: Print the cluster status
          ansible.builtin.debug:
                  msg: "{{ out.stdout }}"
 

@@ -5,7 +5,7 @@
   tasks:
       - name: Check the Current Ceph status
         ansible.builtin.shell:
-                cmd: cephadm shell ceph health details
+                cmd: cephadm shell ceph health detail
         register: ceph_status
 
       - name: Fail if the cluster Health is not Ok
@@ -15,26 +15,40 @@
 
       - name: Put the host into maintenance mode
         ansible.builtin.shell:
-                cmd: ceph orch host maintenance enter "{{ host_name }}" {% if set_force | bool %} --force {% endif }
+                cmd: "cephadm shell -- ceph orch host maintenance enter {{ host_name }} {% if set_force | bool %} --force {% endif %}"
         register: maintenance_result
+        ignore_errors: true
 
-       - name: Perform the upgrade maintenance activity on the node
+      - name: Verify if the host goes into maintenance mode or not.
+        ansible.builtin.shell:
+                cmd: cephadm shell -- ceph orch host ls | grep "{{ host_name }}" | grep Maintenance | wc -l
+        register: out
+        changed_when: false
+
+      - name: Fail the playbook if the host does not goes into maintenance mode
+        ansible.builtin.fail:
+                msg: "Host {{ host_name }} does not enter into maintenance mode"
+        when: ( out.stdout | int < 1 )
+
+       #- name: Perform the upgrade maintenance activity on the node
        # ansible.builtin.dnf:
        #         name: "*"
        #         state: latest
+       # delegate_to: "{{ host_name }}"
 
-       - name: Perform a reboot activity on the node
+       #- name: Perform a reboot activity on the node
        # ansible.builtin.reboot:
        #         test_command: uptime
        #         reboot_timeout: 60
+       # delegate_to: "{{ host_name }}"
 
       - name: Unset the host from maintenance mode
         ansible.builtin.shell:
-                cmd: ceph orch host maintenance exit "{{ host_name }}"
+                cmd: cephadm shell -- ceph orch host maintenance exit "{{ host_name }}"
 
       - name: Verify the hosts status
         ansible.builtin.shell:
-                cmd: ceph orch host ls
+                cmd: cephadm shell ceph orch host ls
         register: host_status
 
       - name: Print the host status output

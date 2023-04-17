@@ -1,0 +1,7 @@
+- hosts: all
+  tasks:
+          - name: Print delegate to
+            ansible.builtin.debug:
+                    msg: "This is delegated to"
+            delegate_to: 
+

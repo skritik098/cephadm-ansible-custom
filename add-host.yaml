@@ -1,0 +1,26 @@
+- hosts: cluster_a
+  become: True
+  tags:
+      - add_hosts
+      - deploy_service
+  gather_facts: true
+  tasks:
+      - name: Deploy SSH Keys on the hosts
+        ansible.builtin.shell:
+                cmd: "ansible-playbook -i {{ groups['cluster_a'] | join(',') }} cephadm-distribute-ssh-key.yml -e cephadm_ssh_user={{ cepadm_ssh_user }} -e admin_node=node2ceph5"
+        async: 45
+        poll: 5
+        run_once: true
+        changed_when: false
+        delegate_to: localhost
+
+      - name: Add Hosts into the cluster
+        ceph_orch_host:
+                name: "{{ item.name }}"
+                address: "{{ item.address  }}"
+                labels: "{{ item.labels }}"
+                state: present
+        loop: "{{ host_list }}"
+        delegate_to: node2ceph5
+        run_once: true
+

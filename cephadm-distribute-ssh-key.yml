@@ -62,7 +62,7 @@
       when: cephadm_pubkey_path is undefined
 
     - name: allow ssh public key for {{ cephadm_ssh_user | default('root') }} account
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ cephadm_ssh_user | default('root') }}"
         key: "{{ lookup('file', cephadm_pubkey_path) if cephadm_pubkey_path is defined else cephadm_get_pub_key.stdout }}"
 
