@@ -1,0 +1,18 @@
+## If you want to registry authentication
+use_registry_auth: false
+
+## Container  Registry Credentials 
+
+registry_url: "registry.redhat.io"
+registry_username: "USERNAME"
+
+## For passwork we can make use of Ansible Vault as well
+registry_pass: "xxxx"      
+
+
+root_user: true      ## If you want the cluster to be deployed as root user or ansible user
+cluster_image: ""    ## Cluster Version image you want to install in the format <IMAGE>:<TAG>
+use_monitoring: true    ## To deploy the monitoring stack services
+cluster_network: ""     ### Cluster Network information
+
+
