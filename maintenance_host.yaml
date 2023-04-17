@@ -1,0 +1,43 @@
+- hosts: node1.c5.com
+  become: true
+  vars:
+          - host_name:
+  tasks:
+      - name: Check the Current Ceph status
+        ansible.builtin.shell:
+                cmd: cephadm shell ceph health details
+        register: ceph_status
+
+      - name: Fail if the cluster Health is not Ok
+        ansible.builtin.fail:
+                msg: "The cluster is not healthy, please ensure cluster state is healthy"
+        when: ceph_status.stdout == "HEALTH_OK"
+
+      - name: Put the host into maintenance mode
+        ansible.builtin.shell:
+                cmd: ceph orch host maintenance enter "{{ host_name }}" {% if set_force | bool %} --force {% endif }
+        register: maintenance_result
+
+       #- name: Perform the upgrade maintenance activity on the node
+       # ansible.builtin.dnf:
+       #         name: "*"
+       #         state: latest
+
+       #- name: Perform a reboot activity on the node
+       # ansible.builtin.reboot:
+       #         test_command: uptime
+       #         reboot_timeout: 60
+
+      - name: Unset the host from maintenance mode
+        ansible.builtin.shell:
+                cmd: ceph orch host maintenance exit "{{ host_name }}"
+
+      - name: Verify the hosts status
+        ansible.builtin.shell:
+                cmd: ceph orch host ls
+        register: host_status
+
+      - name: Print the host status output
+        ansible.builtin.debug:
+                msg: "{{ host_status.stdout }}"
+
