@@ -1,8 +1,25 @@
-- hosts:  admin
+- hosts: localhost
+  gather_facts: false
+  tasks:
+     - name: Set the variable cluster_env if not defined
+       ansible.builtin.set_fact:
+             cluster_env : 'all'
+             admin_hostname: "admin"
+       when: cluster_env is undefined
+
+     - name: Setting hostvar for where to run the Host addition play
+       ansible.builtin.set_fact:
+          admin_hostname: "{{ item }}"
+       when: ( hostvars[item].cluster_group_name == cluster_env )
+       loop: "{{ groups['admin'] }}"
+
+
+- hosts: "{{ hostvars['localhost'].admin_hostname }}" 
   tags:
        - boostrap_cluster
        - deploy_service
   become: "{{ root_user }}"
+  #serial: 1
   tasks:
        - name: Perform a Registry Login on the bootstrap node
          cephadm_registry_login:
@@ -32,32 +49,22 @@
              cluster_network: "{{ cluster_network }}"
          when: ( bootstrap_status.stdout | int < 1 )
 
-         #- name: Deploy SSH Keys on the hosts
-         #  ansible.builin.import_playbook: cephadm-distribute-ssh-key.yml
-         #  vars:
-         #cephadm_ssh_user: root
-         #admin_node: 
 
-
-- hosts: cluster_a
+- name: Adding Hosts and deploying the SSH Keys
+  hosts: "{{ hostvars['localhost'].admin_hostname }}"
   become: True
   tags:
       - add_hosts
       - deploy_service
   gather_facts: true
+  #serial: 1
   tasks:
-    # - name: Deploy SSH Keys on the hosts
-    #    ansible.builtin.import_tasks: cephadm-distribute-ssh-key.yml
-    #    vars:
-    #       cephadm_ssh_user: root
-    #       admin_node: node2ceph5
-
       - name: Deploy SSH Keys on the hosts
         ansible.builtin.shell:
-                cmd: "ansible-playbook -i {{ groups['cluster_a'] | join(',') }} cephadm-distribute-ssh-key.yml -e cephadm_ssh_user={{ cepadm_ssh_user }} -e admin_node=node2ceph5 -vv"
-        async: 15
-        poll: 2
-        run_once: true
+                cmd: "ansible-playbook -i {{ groups[hostvars[inventory_hostname].cluster_group_name] | join(',') }} cephadm-distribute-ssh-key.yml -e cephadm_ssh_user={{ cepadm_ssh_user }} -e admin_node={{ inventory_hostname }} -vv"
+        async: 100
+        poll: 5
+        #run_once: true
         changed_when: false
         delegate_to: localhost
 
@@ -68,41 +75,10 @@
                 labels: "{{ item.labels }}"
                 state: present
         loop: "{{ host_list }}"
-        delegate_to: node2ceph5
-        run_once: true
+        #delegate_to: inventorydd
+        #run_once: true
 
-
-- hosts: cluster_a
-  become: True
-  tags:
-      - remove_hosts
-  tasks:
-  - block:
-      - name: Drain the node
-        ceph_orch_host:
-                name: "{{ ansible_facts['hostname'] }}"
-                state: drain
-
-      - name: Remove Hosts into the cluster
-        ceph_orch_host:
-                name: "{{ ansible_facts['hostname'] }}"
-                address: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
-                labels: "{{ labels }}"
-                state: present
-
-      - name: List the hosts associated with the cluster
-        ansible.builtin.shell:
-                cmd: ceph orch host ls
-        register: out
-
-      - name: Print the host list
-        ansible.builtin.debug:
-                msg: "{{ out.stdout }}"
-
-
-    when: hostvars[inventory_hostname]['role'] == "drain"
-
-- hosts: admin
+- hosts: "{{ hostvars['localhost'].admin_hostname }}"
   become: true
   tags:
           - deploy_service
