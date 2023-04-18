@@ -1,4 +1,4 @@
-- hosts: node2ceph5
+- hosts: "{{ admin_node }}"
   become: true
   vars:
           - host_name:
@@ -11,7 +11,7 @@
       - name: Fail if the cluster Health is not Ok
         ansible.builtin.fail:
                 msg: "The cluster is not healthy, please ensure cluster state is healthy"
-        when: ceph_status.stdout == "HEALTH_OK"
+        when: ceph_status.stdout | search('HEALTH_OK')
 
       - name: Put the host into maintenance mode
         ansible.builtin.shell:
