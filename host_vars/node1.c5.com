@@ -12,32 +12,26 @@ cluster_network: ""
 
 set_force: True
 
+
 host_list:
-        - name: node3ceph5
-          address: 10.74.255.76
+        - name: node2
+          address: 10.74.254.150 
           labels:
                - mon
                - mgr
-        - name: node1ceph5
-          address: 10.74.249.249
-          labels:
-                  - mon
-                  - mgr
 
 initial_spec: |
           service_type: mon
           placement:
             hosts:
-              - node1ceph5
-              - node2ceph5
-              - node3ceph5
+              - node1
+              - node2
           ---
           service_type: mgr
           placement:
             hosts:
-              - node1ceph5
-              - node2ceph5
-              - node3ceph5
+              - node1
+              - node2
           ---
           service_type: osd
           service_id: all-available-devices
