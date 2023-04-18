@@ -1,0 +1,124 @@
+- hosts:  admin
+  tags:
+       - boostrap_cluster
+       - deploy_service
+  become: "{{ root_user }}"
+  tasks:
+       - name: Perform a Registry Login on the bootstrap node
+         cephadm_registry_login:
+             state: login
+             registry_url: "{{ registry_url }}"
+             registry_username: "{{ registry_username }}"
+             registry_password: "{{ registry_pass }}"
+         when: use_registry_auth | bool
+
+
+       - name: Check the node is already bootstrapped or not
+         ansible.builtin.shell:
+                 cmd: netstat -tnlp | grep 3300 | wc -l
+         register: bootstrap_status
+
+
+       - name: Print Output
+         ansible.builtin.debug:
+                 msg: "{{ bootstrap_status.stdout | int }}"
+
+
+       - name: Boostrap the cluster
+         cephadm_bootstrap:
+             mon_ip: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
+             image: "{{ cluster_image }}"
+             monitoring: "{{ use_monitoring }}"
+             cluster_network: "{{ cluster_network }}"
+         when: ( bootstrap_status.stdout | int < 1 )
+
+         #- name: Deploy SSH Keys on the hosts
+         #  ansible.builin.import_playbook: cephadm-distribute-ssh-key.yml
+         #  vars:
+         #cephadm_ssh_user: root
+         #admin_node: 
+
+- hosts: admins
+  tasks:
+          - name: Set facts
+            set_fact: groups['cluster_a'] | join(',') }}"
+            when: hostvars['item'][cluster_group_name] == cluster
+            loop: "{{ groups['admin'] }}" 
+            register: cluster_a_admin
+
+
+
+- hosts: "{{ cluster_a_admin.stdout }}"
+  become: True
+  tags:
+      - add_hosts
+      - deploy_service
+  gather_facts: true
+  tasks:
+    # - name: Deploy SSH Keys on the hosts
+    #    ansible.builtin.import_tasks: cephadm-distribute-ssh-key.yml
+    #    vars:
+    #       cephadm_ssh_user: root
+    #       admin_node: node2ceph5
+
+      - name: Deploy SSH Keys on the hosts
+        ansible.builtin.shell:
+                cmd: "ansible-playbook -i {{ groups['cluster_a'] | join(',') }} cephadm-distribute-ssh-key.yml -e cephadm_ssh_user={{ cepadm_ssh_user }} -e admin_node=node2ceph5 -vv"
+        async: 45
+        poll: 5
+        run_once: true
+        changed_when: false
+        delegate_to: localhost
+
+      - name: Add Hosts into the cluster
+        ceph_orch_host:
+                name: "{{ item.name }}"
+                address: "{{ item.address  }}"
+                labels: "{{ item.labels }}"
+                state: present
+        loop: "{{ host_list }}"
+        delegate_to: node2ceph5
+        run_once: true
+
+
+- hosts: cluster_a
+  become: True
+  tags:
+      - remove_hosts
+  tasks:
+  - block:
+      - name: Drain the node
+        ceph_orch_host:
+                name: "{{ ansible_facts['hostname'] }}"
+                state: drain
+
+      - name: Remove Hosts into the cluster
+        ceph_orch_host:
+                name: "{{ ansible_facts['hostname'] }}"
+                address: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
+                labels: "{{ labels }}"
+                state: present
+
+      - name: List the hosts associated with the cluster
+        ansible.builtin.shell:
+                cmd: ceph orch host ls
+        register: out
+
+      - name: Print the host list
+        ansible.builtin.debug:
+                msg: "{{ out.stdout }}"
+
+
+    when: hostvars[inventory_hostname]['role'] == "drain"
+
+- hosts: admin
+  become: true
+  tags:
+          - deploy_service
+  tasks:
+      - name: Deploy all the service spec file
+        ceph_orch_apply:
+                spec: "{{ initial_spec }} "
+
+
+                       
