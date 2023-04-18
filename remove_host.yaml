@@ -1,0 +1,29 @@
+- hosts: cluster_a
+  become: True
+  tags:
+      - remove_hosts
+  tasks:
+  - block:
+      - name: Drain the node
+        ceph_orch_host:
+                name: "{{ ansible_facts['hostname'] }}"
+                state: drain
+
+      - name: Remove Hosts into the cluster
+        ceph_orch_host:
+                name: "{{ ansible_facts['hostname'] }}"
+                address: "{{ ansible_facts['all_ipv4_addresses'] | ansible.utils.ipaddr('10.74.253.45/21') | join() }}"
+                labels: "{{ labels }}"
+                state: present
+
+      - name: List the hosts associated with the cluster
+        ansible.builtin.shell:
+                cmd: ceph orch host ls
+        register: out
+
+      - name: Print the host list
+        ansible.builtin.debug:
+                msg: "{{ out.stdout }}"
+
+
+    when: hostvars[inventory_hostname]['role'] == "drain"
