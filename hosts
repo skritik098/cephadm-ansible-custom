@@ -1,6 +1,6 @@
 [admin]
 node2ceph5      cluster_group_name=cluster_a
-node1.c5.com   cluster_group_name=cluster_b
+#node1.c5.com   cluster_group_name=cluster_b
 #node2ind5   cluster_group_name=cluster_c
 
 #node1.c5.com
@@ -12,9 +12,9 @@ node1ceph5
 node3ceph5 
 
 
-[cluster_b]
-node2.c5.com
-node1.c5.com
+#[cluster_b]
+#node2.c5.com
+#node1.c5.com
 #node3.c5.com
 
 #[cluster_c]
