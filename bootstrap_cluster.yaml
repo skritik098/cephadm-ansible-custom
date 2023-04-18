@@ -1,4 +1,20 @@
-- hosts:  admin
+- hosts: localhost
+  gather_facts: false
+  tasks:
+     - name: Set the variable cluster_env if not defined
+       ansible.builtin.set_fact:
+             cluster_env : 'all'
+             admin_hostname: "admin"
+       when: cluster_env is undefined
+
+     - name: Setting hostvar for where to run the Host addition play
+       ansible.builtin.set_fact:
+          admin_hostname: "{{ item }}"
+       when: ( hostvars[item].cluster_group_name == cluster_env )
+       loop: "{{ groups['admin'] }}"
+
+
+- hosts:  "{{ hostvars['localhost'].admin_hostname }}"
   become: "{{ root_user }}"
   tasks:
        - name: Perform a Registry Login on the bootstrap node
@@ -33,6 +49,7 @@
          ansible.builtin.shell:
                  cmd: " cephadm shell ceph status"
          register: out
+         changed_when: false
 
        - name: Print the cluster status
          ansible.builtin.debug:
